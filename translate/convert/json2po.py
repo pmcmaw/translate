@@ -24,6 +24,7 @@ See: http://docs.translatehouse.org/projects/translate-toolkit/en/latest/command
 for examples and usage instructions.
 """
 
+import os
 import logging
 
 from translate.storage import po
@@ -39,13 +40,14 @@ class json2po(object):
         """Converts a JSON file to a PO file"""
         output_store = po.pofile()
         output_header = output_store.header()
-        output_header.addnote("extracted from %s" % input_store.filename,
-                              "developer")
+        # output_header.addnote("extracted from %s" % input_store.filename,
+        #                       "developer")
         for input_unit in input_store.units:
-            output_unit = self.convert_unit(input_unit, "developer")
+            output_unit = self.convert_unit(input_unit, input_store, "developer")
             if output_unit is not None:
                 output_store.addunit(output_unit)
         output_store.removeduplicates(duplicatestyle)
+
         return output_store
 
     def merge_store(self, template_store, input_store, blankmsgstr=False,
@@ -59,12 +61,12 @@ class json2po(object):
 
         input_store.makeindex()
         for template_unit in template_store.units:
-            origpo = self.convert_unit(template_unit, "developer")
+            origpo = self.convert_unit(template_unit, input_store, "developer")
             # try and find a translation of the same name...
             template_unit_name = "".join(template_unit.getlocations())
             if template_unit_name in input_store.locationindex:
                 translatedjson = input_store.locationindex[template_unit_name]
-                translatedpo = self.convert_unit(translatedjson, "translator")
+                translatedpo = self.convert_unit(translatedjson, input_store, "translator")
             else:
                 translatedpo = None
             # if we have a valid po unit, get the translation and add it...
@@ -78,7 +80,7 @@ class json2po(object):
         output_store.removeduplicates(duplicatestyle)
         return output_store
 
-    def convert_unit(self, input_unit, commenttype):
+    def convert_unit(self, input_unit, input_store, commenttype):
         """Converts a JSON unit to a PO unit
 
         :return: None if empty or not for translation
@@ -90,6 +92,7 @@ class json2po(object):
         output_unit.addlocation(input_unit.getid())
         output_unit.source = input_unit.source
         output_unit.target = ""
+        output_unit.addnote("%s" % os.path.basename(input_store.filename),"developer")
         return output_unit
 
 
